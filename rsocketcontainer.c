@@ -263,3 +263,16 @@ Node * delete_tree(Node * root){
     free(root);
     return NULL;
 }
+
+Node * find_node(Node * root, int key){
+    while(root->key != key && root != NULL){
+        if(root->key < key){
+            root = root->left;
+        }
+        else if(root->key > key){
+            root = root->right;
+        }
+    }
+
+    return root;
+}

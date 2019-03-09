@@ -1,0 +1,1 @@
+// NOTE : Is there a way to segment the code by seperating the thread code completely from the API implementation and passing only the references
