@@ -19,8 +19,8 @@
 #include <sys/stat.h>
 
 
-int r_socket(int domain, int type, int protocol);
-
-
+extern int r_socket(int domain, int type, int protocol);
+extern int r_bind(int sockfd, const struct sockaddr * addr, socklen_t len);
+extern int r_close(int sockfd);
 
 #endif

@@ -11,6 +11,10 @@
 
 #include "rsocketcontainer.h"
 
+#define debug_flag 0
+#define debug_log(...) if(debug_flag == 1 ) printf(__VA_ARGS__)
+#define debug_comment //
+#define FLUSH() debug_comment fflush(stdin);fflush(stdout);fflush(stderr)
 
 int node_height(Node * root){
     if(root == NULL){
@@ -186,9 +190,7 @@ Node * delete_node(Node * root, int key){
                 *root = *t;
             }
             if(t->container != NULL){
-                printf("\nTrying to delete container");
                 free(t->container);
-                printf("\nContainer deleted");
             }
             free(t);
         }
@@ -258,21 +260,33 @@ Node * delete_tree(Node * root){
     root->left = delete_tree(root->left);
     root->right = delete_tree(root->right);
 
-    printf("\nDeleting key : %d", root->key);
+    // printf("\nDeleting key : %d", root->key);
     free(root->container);
     free(root);
     return NULL;
 }
 
 Node * find_node(Node * root, int key){
-    while(root->key != key && root != NULL){
-        if(root->key < key){
-            root = root->left;
-        }
-        else if(root->key > key){
-            root = root->right;
-        }
+    if(root == NULL){
+        debug_log("\nReturning NULL");
+        FLUSH();
+        return NULL;
     }
-
+    if(root->key < key){
+        debug_log("\nGoing left");
+        FLUSH();
+        return find_node(root->left, key);
+    }
+    else if(root->key > key){
+        debug_log("\nGoing right");
+        FLUSH();
+        return find_node(root->right, key);
+    }
+    else{
+        debug_log("\nReturning right value");
+        FLUSH();
+        return root;
+    }
+    
     return root;
 }
