@@ -1,61 +1,35 @@
-#include <pthread.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h> 
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <termios.h>
+
+#define PORT 10000
 
 
-void * thread_function(void * attribute){
-    int * ptr ;
-    ptr = malloc(sizeof(int));
-    printf("Thread running \n");
-    sleep(1);
-    printf("Thread running \n");
-    sleep(1);
-    printf("Thread running \n");
-    sleep(1);
-    printf("Thread running \n");
-    sleep(1);
-    printf("Thread running \n");
-    sleep(1);
-    printf("Thread running \n");
-    sleep(1);
-    printf("Thread running \n");
-    sleep(1);
-    printf("Thread running \n");
-    sleep(1);
-    printf("Thread running \n");
-    sleep(1);
-    printf("Thread running \n");
-    sleep(1);
-    *ptr = 1 ;
-    return (void *)ptr;
-}
+int main(int argc, char **argv)
+{
+    int sockfd;
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    struct sockaddr_in server;
 
-pthread_t create_thread(){
-    pthread_t thread_id;
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(PORT);
 
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    pthread_create(&thread_id, &attr, thread_function, NULL);
 
-    printf("create_thread_running \n");
-    sleep(1);
-    printf("create_thread_exiting\n");
-    return thread_id;
-}
+    char * ptr = inet_ntoa(server.sin_addr);
+    char * ptr2 = inet_ntoa(server.sin_addr);
 
-int main(){
-    printf("Running main \n");
+    printf("Pointer to first inet_ntoa call : %p\n", (void *)ptr);
+    printf("Poitner to second inet_ntoa call : %p\n", (void *)ptr2);
 
-    pthread_t thread_id = create_thread();
-    
-    int * ptr = 0;
-    pthread_join(thread_id, (void **)&ptr);
 
-    printf("Return value of thread : %d", *ptr);
-    
     return 0;
 }

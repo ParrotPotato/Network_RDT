@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "wait.h": "c",
-        "rsocketcontainer.h": "c"
+        "rsocketcontainer.h": "c",
+        "unistd.h": "c"
     }
 }

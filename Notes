@@ -1,0 +1,24 @@
+One UDP Socket : all communication
+Thread X : handles all the acknowledgement and retransmissions
+
+3 main tables unacknowledge_mssage 
+			  recieved message 
+			  recieved message id
+
+
+Send() :  r_sendto()
+	same parameters as sendto() of socket
+	send the message via a UDP port and adds the IP and PORT along with other details in the structure.
+	(done in the main thread)
+	
+Handling message recives(application and ACK)
+	The THREAD_X waits on the select call (with a timeout of 2 seconds (for my implementation)). 
+	Coming out of timeout : 
+		HandleRetransmission()
+			handle the retransmission of the message whose acknowledgement is not recieved
+			Checkif the timeout period is over and if yes then retranimit the message to to the stored IP and PORT
+			
+			reset their sending times
+				-- deleting the node
+				-- changing the time
+				-- setting it back

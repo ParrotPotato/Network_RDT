@@ -18,9 +18,11 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-
 extern int r_socket(int domain, int type, int protocol);
 extern int r_bind(int sockfd, const struct sockaddr * addr, socklen_t len);
+extern int r_connect(int sockfd, const struct sockaddr * addr, socklen_t len);
 extern int r_close(int sockfd);
+extern int r_sendto(int sockfd, const void * message, size_t len, int flags, const struct sockaddr * dest_addr, socklen_t addrlen);
+extern int r_recvfrom(int sockfd, const void * message, size_t len, int flags, const struct sockaddr * dest_addr, socklen_t * addrlen);
 
 #endif

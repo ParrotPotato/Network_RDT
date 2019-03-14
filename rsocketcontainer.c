@@ -59,7 +59,7 @@ Node * create_Node_empty(){
     return ptr;
 }
 
-Node * create_Node(int key, void *container){
+Node * create_Node(long int key, void *container){
     Node * ptr = (Node *)malloc(sizeof(Node));
     ptr->key = key;
     ptr->container = container;
@@ -117,7 +117,7 @@ Node * rotate_node_left(Node * x){
     return y;
 }
 
-Node * insert_node(Node * root, int key, void * container){
+Node * insert_node(Node * root, long int key, void * container){
     if(root == NULL){
         return create_Node(key, container);
     }
@@ -167,7 +167,7 @@ Node * insert_node(Node * root, int key, void * container){
     return root;
 }
 
-Node * delete_node(Node * root, int key){
+Node * delete_node(Node * root, long int key){
     if(root == NULL)
         return root;
 
@@ -236,7 +236,7 @@ void print_key_sequence(Node * root){
     if(root == NULL)
         return ;
     print_key_sequence(root->left);
-    printf("%d-%d ", root->key, node_height(root));
+    printf("%ld-%d ", root->key, node_height(root));
     print_key_sequence(root->right);
 }
 
@@ -248,7 +248,7 @@ void print_all_leaf(Node * root){
     print_all_leaf(root->right);
 
     if(root->left == NULL && root->right == NULL)
-        printf("%d ", root->key);
+        printf("%ld ", root->key);
     return ;
 }
 
@@ -266,7 +266,7 @@ Node * delete_tree(Node * root){
     return NULL;
 }
 
-Node * find_node(Node * root, int key){
+Node * find_node(Node * root, long int key){
     if(root == NULL){
         debug_log("\nReturning NULL");
         FLUSH();
