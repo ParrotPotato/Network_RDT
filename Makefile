@@ -1,7 +1,7 @@
 all: ./bin/main.out ./bin/testclient.out
 
-./bin/main.out: ./bin/debug/main.o ./bin/debug/rsocket.o ./bin/debug/rcontainer.o ./bin/debug/rsocketcontainer.o
-	gcc ./bin/debug/main.o ./bin/debug/rsocket.o ./bin/debug/rcontainer.o ./bin/debug/rsocketcontainer.o -o ./bin/main.out -pthread
+./bin/main.out: ./bin/debug/main.o ./bin/debug/rsocket.o ./bin/debug/rlistcontainer.o
+	gcc ./bin/debug/main.o ./bin/debug/rsocket.o ./bin/debug/rlistcontainer.o -o ./bin/main.out -pthread
 
 ./bin/testclient.out: ./bin/debug/testclient.o
 	gcc ./bin/debug/testclient.o -o ./bin/testclient.out -pthread
@@ -12,11 +12,8 @@ all: ./bin/main.out ./bin/testclient.out
 ./bin/debug/rsocket.o: rsocket.c
 	gcc rsocket.c -c -g -o ./bin/debug/rsocket.o
 
-./bin/debug/rcontainer.o: rcontainer.c
-	gcc rcontainer.c -c -g -o ./bin/debug/rcontainer.o
- 
-./bin/debug/rsocketcontainer.o: rsocketcontainer.c
-	gcc rsocketcontainer.c -c -g -o ./bin/debug/rsocketcontainer.o
+./bin/debug/rlistcontainer.o: rlistcontainer.c
+	gcc rlistcontainer.c -c -g -o ./bin/debug/rlistcontainer.o
 
 ./bin/debug/testclient.o: testclient.c
 	gcc testclient.c -c -g -o ./bin/debug/testclient.o

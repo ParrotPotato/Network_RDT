@@ -1,12 +1,24 @@
-#include "rsocketcontainer.h"
+
+
+#define PORT 10000
+
+// #define MAIN_TESTING
+#define MAIN_TESTING
+
+#ifdef MAIN_TESTING
+
 #include "rsocket.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-#define PORT 10000
+void print_sockaddr(struct sockaddr * a){
+    int i=0 ;
+    for(i = 0 ; i < 14 ; i++){
+        printf("\ni = %d, %d", i , (int)a->sa_data[i]);
+    }
 
-#define MAIN_TESTING
-
+    printf("\nFAMILY  = %d", a->sa_family);
+}
 
 
 int main(){
@@ -20,13 +32,23 @@ int main(){
     server_addr.sin_port = htons(PORT);
     int addr_len = sizeof(server_addr);
 
+    // print_sockaddr((struct sockaddr *)&server_addr);
+
     r_bind(r_socket_test_fd, (const struct sockaddr *) & server_addr, sizeof(server_addr));
+
+    // print_sockaddr((struct sockaddr *)&server_addr);
+
 
     char * buffer = (char *)malloc(sizeof(char) * 100);
     int buffer_len = 100;
 
-    recvfrom(r_socket_test_fd, buffer, buffer_len + 1 , 0, (struct sockaddr *) & server_addr, &addr_len);
+    r_recvfrom(r_socket_test_fd, buffer, buffer_len + 1 , 0, (struct sockaddr *) & server_addr, &addr_len);
+    // recvfrom(r_socket_test_fd, buffer, buffer_len + 1 , 0, NULL, NULL);
+
     printf("\nMessage Recieved : %s", buffer);
+
+    // print_sockaddr((struct sockaddr *)&server_addr);
+
 
     // printf("\nType message : ");
     // scanf("%s", buffer);
@@ -35,8 +57,44 @@ int main(){
 
     r_sendto(r_socket_test_fd, buffer, buffer_len, 0, (struct sockaddr *) & server_addr, addr_len);
 
+    sleep(6);
+
     r_close(r_socket_test_fd);
 
     printf("\n");
     return 0;
 }
+
+#endif
+
+#ifdef TREE_TESTING
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "rlistcontainer.h"
+
+int main(){
+    // printf("Hello world\n");
+    Node * root = NULL;
+    // printf("Creating somethings 1\n");
+    root = insert_node(root, 10, NULL);
+    // printf("Creating somethings 2\n");
+    root = insert_node(root, 15, NULL);
+    // printf("Creating somethings 3\n");
+    root = insert_node(root, 3, NULL);
+    // printf("Creating somethings 4\n");
+    root = insert_node(root, 8, NULL);
+    // printf("Creating somethings 5\n");
+
+    print_list(root);
+
+    root = delete_node(root, 10);
+
+    printf("\n");
+
+    print_list(root);
+
+    return 0;
+}
+
+#endif

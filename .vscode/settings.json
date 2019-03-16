@@ -2,6 +2,9 @@
     "files.associations": {
         "wait.h": "c",
         "rsocketcontainer.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "rlistcontainer.h": "c",
+        "rcontainer.h": "c",
+        "pthread.h": "c"
     }
 }

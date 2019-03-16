@@ -17,6 +17,15 @@
 
 #define PORT 10000
 
+void print_sockaddr(struct sockaddr * a){
+    int i=0 ;
+    for(i = 0 ; i < 14 ; i++){
+        printf("\ni = %d, %d", i , (int)a->sa_data[i]);
+    }
+
+    printf("\nFAMILY  = %d", a->sa_family);
+}
+
 int main(){
     int sockfd;
 
@@ -33,16 +42,22 @@ int main(){
 
     int len = sizeof(server);
 
+    print_sockaddr((struct sockaddr *)&server);
+
     if(connect(sockfd, (const struct sockaddr *)&server, len) < -1 ){
         perror("\nError bind ");
         close(sockfd);
         return -1;
     }
+
     char * buffer = (char *)malloc(sizeof(char) * 101);
     strcpy(buffer, "hello from the other side");
-    sendto(sockfd, buffer, 101, 0, (const struct sockaddr *)&server, len);
+    sendto(sockfd, buffer, 101, 0, NULL, NULL);
+    print_sockaddr((struct sockaddr *)&server);
 
-    int recv_n  = recvfrom(sockfd, buffer, 101, 0, (struct sockaddr *)&server, &len);
+    int recv_n  = recvfrom(sockfd, buffer, 101, 0, NULL, NULL);
+    print_sockaddr((struct sockaddr *)&server);
+
     buffer[recv_n] = '\0';
     printf("Message recieved : %s\n", buffer + 1 );
 

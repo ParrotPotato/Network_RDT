@@ -1,0 +1,25 @@
+One UDP socket through which all the communication will happen on the connection.
+
+Thread X which handle all the timeouts and messages recieved from UDP socket.
+
+at least 3 structures 
+	recieve buffer(application messages that are recieved-each message once )
+	unacknowledge buffer (message that are sent to the receiver but not yet acaknowledge by him )
+	receive message id (used for detecting duplicate messages)
+	
+
+Send : 
+	adds a unique id to the message that starts at one and add the message to the unacknowledge message 
+	everything that happens here happened in the user thread and not in thread x
+	
+Recv:
+	Thread x is waiting on the select command and 2 things can happen
+	-> come out due to time out 
+		handleretransmission()
+			retransmits all the messages in unacknowledge table which has time > timeout limit. retransmit and update the sending time. 
+	->comes out because of a avaliable receive Handlereceive()
+			-> Application message to be handled in HandleAppMsgRecv()
+				 check the recieved message id table if the id is there drop the message but sent the acknowledgement for the message.
+				 if not duplicate then add to recieve buffer including the id and source port
+			-> ACK message message handling HandleACKMsgRecv().
+			unacknowledge mesage is removed corresponding to the message id 
