@@ -53,9 +53,9 @@ struct def_recieved_message_container{
 };
 
 struct def_socket_container{
-    Table receive_buffer;
-    Table unacknowledged_message;
     Table receive_message;
+    Table unacknowledged_message;
+    Table receive_message_id;
 
     int sockfd;
     int message_counter;
@@ -72,14 +72,20 @@ struct def_thread_container{
     pthread_attr_t attr;
 };
 
-typedef struct def_receive_buffer_container receive_buffer_container ;
+typedef struct def_receive_buffer_container receive_message_container ;
 typedef struct def_unacknowledge_message_container unacknowledge_message_container ;
-typedef struct def_recieved_message_container recieved_message_container ;
+typedef struct def_recieved_message_container receive_message_id_container ;
 typedef struct def_socket_container socket_container ;
 typedef struct def_thread_container thread_container ;
 
-receive_buffer_container * new_receive_buffer_container(int message_id, char buffer[100]){
-    receive_buffer_container * buffer_ptr = (receive_buffer_container *)malloc(sizeof(receive_buffer_container));
+receive_message_id_container * new_receive_message_id_container(int message_id){
+    receive_message_id_container * ptr = (receive_message_id_container *)malloc(sizeof(receive_message_id_container));
+    ptr->message_id = message_id;
+    return ptr;
+}
+
+receive_message_container * new_receive_message_container(int message_id, char buffer[100]){
+    receive_message_container * buffer_ptr = (receive_message_container *)malloc(sizeof(receive_message_container));
     buffer_ptr->message_id = message_id;
     strcpy(buffer_ptr->buffer, buffer);
 
@@ -96,30 +102,17 @@ unacknowledge_message_container * new_unacknowledge_message_container(){
 }
 
 int send_unacknowledge_message(int sockfd, unacknowledge_message_container * ptr){
+    debug_log("sending message \n ");
     char * buffer = (char *)malloc(sizeof(char) * (strlen(ptr->buffer) + 2 ));
-    int i=0 ;
-    for(i =0 ; i < strlen(ptr->buffer) ; i++){
-        buffer[i] = ptr->buffer[i];
-    }
-    buffer[i] = '\0';
-
-    buffer[0] = (char)ptr->message_id;
-    int send_n = sendto(sockfd, buffer, strlen(ptr->buffer) + 2, 0, &ptr->addr, sizeof(ptr->addr));
-    return send_n;
-}
-
-int x_send_unacknowledge_message(int sockfd, unacknowledge_message_container * ptr){
-    x_debug_log("sending unacknowledge message using the send_function()\n");
-    char * buffer = (char *)malloc(sizeof(char) * (strlen(ptr->buffer) + 2));
     int i=1 ;
-    for(i =1 ; i < strlen(ptr->buffer) ; i++){
-        buffer[i] = ptr->buffer[i];
+    for(i =1 ; i < strlen(ptr->buffer) + 1 ; i++){
+        buffer[i] = ptr->buffer[i - 1];
     }
     buffer[i] = '\0';
-    x_debug_log("retransmission message generated \n");
+    buffer[i+1] = '\0';
+
     buffer[0] = (char)ptr->message_id;
-    int send_n = sendto(sockfd, buffer, strlen(ptr->buffer) + 2, 0, &ptr->addr, sizeof(ptr->addr));
-    free(buffer);
+    int send_n = sendto(sockfd, buffer, strlen(ptr->buffer + 1) + 3, 0, &ptr->addr, sizeof(ptr->addr));
     return send_n;
 }
 
@@ -138,8 +131,8 @@ socket_container * new_socket_container(int sockfd){
     socket_ptr->is_usable = 0;
     socket_ptr->is_close_requested =  0;
 
-    socket_ptr->receive_buffer = NULL;
     socket_ptr->receive_message = NULL;
+    socket_ptr->receive_message_id = NULL;
     socket_ptr->unacknowledged_message = NULL;
     
     socket_ptr->sockfd = sockfd;
@@ -211,8 +204,12 @@ int r_socket(int domain, int type, int protocol){
 
 int r_bind(int fd, const struct sockaddr * addr, socklen_t len){
     pthread_mutex_lock(&socket_table_lock);
-    socket_container * socket_ptr = (socket_container *)find_node(socket_table, fd)->container;
+    Node * node1 =  find_node(socket_table, fd);
     pthread_mutex_unlock(&socket_table_lock);
+
+    if(node1 == NULL)
+        return -1;
+    socket_container * socket_ptr = (socket_container *)node1->container;
 
     if(bind(fd, addr, len)  < 0){
         return -1 ;
@@ -229,8 +226,12 @@ int r_bind(int fd, const struct sockaddr * addr, socklen_t len){
 
 int r_connect(int fd, const struct sockaddr * addr, socklen_t len){
     pthread_mutex_lock(&socket_table_lock);
-    socket_container * socket_ptr = (socket_container *)find_node(socket_table, fd)->container;
+    Node * node1 =  find_node(socket_table, fd);
     pthread_mutex_unlock(&socket_table_lock);
+
+    if(node1 == NULL)
+        return -1;
+    socket_container * socket_ptr = (socket_container *)node1->container;
 
     if(connect(fd, addr, len)  < 0){
         return -1 ;
@@ -246,11 +247,13 @@ int r_connect(int fd, const struct sockaddr * addr, socklen_t len){
 
 int r_sendto(int fd, const void * buf, size_t len, int flag, const struct sockaddr * addr, socklen_t addrlen){
     pthread_mutex_lock(&socket_table_lock);
-    socket_container * socket_ptr = (socket_container *)find_node(socket_table, fd)->container;
+    Node * node1 =  find_node(socket_table, fd);
     pthread_mutex_unlock(&socket_table_lock);
-    if(socket_ptr == NULL){
+
+    if(node1 == NULL)
         return -1;
-    }
+    socket_container * socket_ptr = (socket_container *)node1->container;
+
     
     unacknowledge_message_container * unack_message_ptr = new_unacknowledge_message_container();
     strcpy(unack_message_ptr->buffer, (char *)buf);
@@ -276,11 +279,12 @@ int r_sendto(int fd, const void * buf, size_t len, int flag, const struct sockad
 
 int r_close(int fd){
     pthread_mutex_lock(&socket_table_lock);
-    socket_container * socket_ptr = (socket_container *)find_node(socket_table, fd)->container;
+    Node * node1 =  find_node(socket_table, fd);
     pthread_mutex_unlock(&socket_table_lock);
-    if(socket_ptr == NULL){
+
+    if(node1 == NULL)
         return -1;
-    }
+    socket_container * socket_ptr = (socket_container *)node1->container;
     // debug_log("\nfetching lock for socket_ptr");
 
     pthread_mutex_lock(&socket_ptr->lock);
@@ -308,7 +312,7 @@ void retransmit(Node * ptr, void * args){
     if(time(NULL) - unack_message->sending_time > 2){
         x_debug_log("Retransmitting    : %s\n", unack_message->buffer);
         x_debug_log("Retransmitting to : %d\n", *((int *)args));
-        x_send_unacknowledge_message(*((int *)args), unack_message);
+        send_unacknowledge_message(*((int *)args), unack_message);
         unack_message->sending_time = time(NULL);
         x_debug_log("retransmitting message\n");
     }
@@ -320,14 +324,73 @@ void HandleRetansmission(socket_container * ptr){
     x_debug_log("Handling retransmission\n");
     apply_to_all_nodes(ptr->unacknowledged_message, retransmit, (void *)&ptr->sockfd);
     pthread_mutex_unlock(&ptr->lock);
-
 }
 
-// TODO : check for acknowledgment and user message 
-// TODO : Implement the message_id buffer 
-// TODO : Implement the checking for duplicate messages
-// TODO : HandleAppMsgRecv for handling the application messages and 
-// TODO : HandleACKMsgRecv for handling the ACK messages
+
+
+void HandleACKMsgRecv(socket_container *ptr, char * tempbuffer, int len){
+    x_debug_log("Handeling Acknowledge message \n");
+    int message_id = (int)tempbuffer[1];
+    x_debug_log("Message received  = %d \n", message_id);
+
+    pthread_mutex_lock(&ptr->lock);
+    ptr->unacknowledged_message = delete_node(ptr->unacknowledged_message, message_id);
+    pthread_mutex_unlock(&ptr->lock);
+
+    return ;
+}
+
+void HandleAppMsgRecv(socket_container *ptr, char * tempbuffer, int len, struct sockaddr temp, int addrlen){
+    x_debug_log("Handling Application message (received)\n");
+
+    int message_id = (int)tempbuffer[0];
+    char acknowledgement_buffer[3];
+
+    Node  * node = find_node(ptr->receive_message_id, message_id);
+    
+    if(node != NULL){
+        acknowledgement_buffer[0] = 'a';
+        acknowledgement_buffer[1] = (char)message_id;
+        acknowledgement_buffer[2] = '\0';
+        int send_n = sendto(ptr->sockfd, acknowledgement_buffer, 3, 0, &temp, addrlen);
+
+        x_debug_log("Duplicate message received \n");
+
+        return ;
+    }
+
+    receive_message_id_container * id_container = new_receive_message_id_container(message_id);
+    
+    receive_message_container * recvmsg_container = new_receive_message_container(message_id, tempbuffer + 1);
+    recvmsg_container->addrlen = addrlen;
+    recvmsg_container->len = len;
+    recvmsg_container->addr = temp;
+
+    pthread_mutex_lock(&ptr->lock);
+
+    ptr->receive_message_id = insert_node(ptr->receive_message_id, id_container->message_id , (void *)id_container);
+
+    ptr->receive_message = insert_node(ptr->receive_message, recvmsg_container->message_id, (void *)recvmsg_container);
+
+    x_debug_log("Inserted a received message in the buffer \n");
+    x_debug_log("Buffer   : %s \n", recvmsg_container->buffer);
+    x_debug_log("Buffer-id: %d \n", recvmsg_container->message_id);
+
+
+    pthread_cond_signal(&ptr->cond);
+    pthread_mutex_unlock(&ptr->lock);
+
+
+    acknowledgement_buffer[0] = 'a';
+    acknowledgement_buffer[1] = (char)message_id;
+    acknowledgement_buffer[2] = '\0';
+    int send_n = sendto(ptr->sockfd, acknowledgement_buffer, 3, 0, &temp, addrlen);
+
+    x_debug_log("Message received \n");
+
+    return ;
+}
+
 
 
 void HandleReceive(socket_container * ptr){
@@ -338,25 +401,13 @@ void HandleReceive(socket_container * ptr){
     struct sockaddr temp ;
     
     int recv_n = recvfrom(ptr->sockfd, tempbuffer, 101, 0, &temp, &len);
-    receive_buffer_container * recv_buffer = new_receive_buffer_container((int)tempbuffer[0], tempbuffer + 1 );
-    recv_buffer->addrlen = len;
-    recv_buffer->len = recv_n;
-    recv_buffer->addr = temp;
-    
-    pthread_mutex_lock(&ptr->lock);
-    ptr->receive_buffer = insert_node(ptr->receive_buffer, recv_buffer->message_id, (void *)recv_buffer);
 
-    x_debug_log("Inserted a received message in the buffer \n");
-    x_debug_log("Buffer   : %s \n", recv_buffer->buffer);
-    x_debug_log("Buffer-id: %d \n", recv_buffer->message_id);
-
-    pthread_cond_signal(&ptr->cond);
-    pthread_mutex_unlock(&ptr->lock);
-
-    // NOTE : insert the message id into the recieve message table (which has all the recieved ids of the messages)
-
-    
-    return;
+    if(tempbuffer[0] == 'a'){
+        HandleACKMsgRecv(ptr, tempbuffer, recv_n);
+    }
+    else{
+        HandleAppMsgRecv(ptr, tempbuffer, recv_n, temp, len);
+    }
 }
 
 void * thread_x_routine(void * args){
@@ -390,8 +441,8 @@ void * thread_x_routine(void * args){
             
             // TODO : waiting till all the messages have ben recieved
 
-            socket_ptr->receive_buffer = delete_list(socket_ptr->receive_buffer);
             socket_ptr->receive_message = delete_list(socket_ptr->receive_message);
+            socket_ptr->receive_message_id = delete_list(socket_ptr->receive_message_id);
             socket_ptr->unacknowledged_message = delete_list(socket_ptr->unacknowledged_message);
 
             x_debug_log("close request handled by thread\n");
@@ -429,37 +480,40 @@ void * thread_x_routine(void * args){
 
 int r_recvfrom(int fd, void * buffer, size_t len, int flag, struct sockaddr * addr , socklen_t * addrlen){
     pthread_mutex_lock(&socket_table_lock);
-    socket_container * socket_ptr = (socket_container *)find_node(socket_table, fd)->container;
+    Node * node1 =  find_node(socket_table, fd);
     pthread_mutex_unlock(&socket_table_lock);
 
-    if(socket_ptr == NULL)
+    if(node1 == NULL)
         return -1;
+    socket_container * socket_ptr = (socket_container *)node1->container;
 
     char * buff = (char *)buffer;
 
     pthread_mutex_lock(&socket_ptr->lock);
-    if(socket_ptr->receive_buffer == NULL){
+    if(socket_ptr->receive_message == NULL){
         debug_log("waiting for receving a message\n");
         pthread_cond_wait(&socket_ptr->cond, &socket_ptr->lock);
         debug_log("Message recieved\n");
     }
     pthread_mutex_unlock(&socket_ptr->lock);
 
+    receive_message_container * message_container = (receive_message_container *)socket_ptr->receive_message->container;
+
     int i =0 ; 
     for(i=0 ;i < len ; i++){
-        buff[i] = ((receive_buffer_container *)socket_ptr->receive_buffer->container)->buffer[i];
+        buff[i] = message_container->buffer[i];
     }
     
     for(i=0 ; i < 14 ; i++){
-        addr->sa_data[i] = ((receive_buffer_container *)socket_ptr->receive_buffer->container)->addr.sa_data[i];
+        addr->sa_data[i] = message_container->addr.sa_data[i];
     }
-    addr->sa_family  = ((receive_buffer_container *)socket_ptr->receive_buffer->container)->addr.sa_family;
+    addr->sa_family  = message_container->addr.sa_family;
 
-    *addrlen = ((receive_buffer_container *)socket_ptr->receive_buffer->container)->addrlen;
-    int retvalue = ((receive_buffer_container *)socket_ptr->receive_buffer->container)->len;
+    *addrlen = message_container->addrlen;
+    int retvalue = message_container->len;
 
     pthread_mutex_lock(&socket_ptr->lock);
-    socket_ptr->receive_buffer = delete_node(socket_ptr->receive_buffer, socket_ptr->receive_buffer->key);
+    socket_ptr->receive_message = delete_node(socket_ptr->receive_message, socket_ptr->receive_message->key);
     pthread_mutex_unlock(&socket_ptr->lock);
 
     return retvalue;

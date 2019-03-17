@@ -5,6 +5,7 @@
         "unistd.h": "c",
         "rlistcontainer.h": "c",
         "rcontainer.h": "c",
-        "pthread.h": "c"
+        "pthread.h": "c",
+        "select.h": "c"
     }
 }

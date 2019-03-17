@@ -57,8 +57,35 @@ int main(){
 
     r_sendto(r_socket_test_fd, buffer, buffer_len, 0, (struct sockaddr *) & server_addr, addr_len);
 
-    sleep(6);
+    strcpy(buffer, "This is the first message from the server side");
+    printf("\nSending : %s\n", buffer);
 
+    r_sendto(r_socket_test_fd, buffer, buffer_len, 0, (struct sockaddr *) & server_addr, addr_len);
+
+    strcpy(buffer, "This is the second message from the server side");
+    printf("\nSending : %s\n", buffer);
+
+    r_sendto(r_socket_test_fd, buffer, buffer_len, 0, (struct sockaddr *) & server_addr, addr_len);
+
+    strcpy(buffer, "This is the third message from the server side");
+    printf("\nSending : %s\n", buffer);
+
+    r_sendto(r_socket_test_fd, buffer, buffer_len, 0, (struct sockaddr *) & server_addr, addr_len);
+
+
+    printf("\n\nMAIN THREAD SLEEPING FOR 15 SECONDS\n\n");
+    sleep(15);
+
+    while(1){
+        r_recvfrom(r_socket_test_fd, buffer, buffer_len + 1 , 0, (struct sockaddr *) & server_addr, &addr_len);
+        printf("\nMessage Recieved : %s\n", buffer);
+        if(strcmp(buffer, "QUIT") == 0)
+        {
+            break;
+        }
+    }
+
+    printf("Quitting the MAIN THREAD \n");
     r_close(r_socket_test_fd);
 
     printf("\n");
