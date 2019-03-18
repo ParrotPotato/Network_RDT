@@ -14,7 +14,7 @@
 #include "rlistcontainer.h"
 
 
-#define TESTING
+// #define TESTING
 
 #ifdef TESTING 
 
@@ -77,6 +77,8 @@ typedef struct def_unacknowledge_message_container unacknowledge_message_contain
 typedef struct def_recieved_message_container receive_message_id_container ;
 typedef struct def_socket_container socket_container ;
 typedef struct def_thread_container thread_container ;
+
+int dropMessage(float p);
 
 receive_message_id_container * new_receive_message_id_container(int message_id){
     receive_message_id_container * ptr = (receive_message_id_container *)malloc(sizeof(receive_message_id_container));
@@ -287,6 +289,11 @@ int r_close(int fd){
     socket_container * socket_ptr = (socket_container *)node1->container;
     // debug_log("\nfetching lock for socket_ptr");
 
+    while(length(socket_ptr->unacknowledged_message) > 0){
+        debug_log("Waiting for clearance of unacknowledge message buffer\n");
+        sleep(1);
+    }
+
     pthread_mutex_lock(&socket_ptr->lock);
     socket_ptr->is_close_requested = 1 ;
     debug_log("requesting thread to close\n");
@@ -388,6 +395,8 @@ void HandleAppMsgRecv(socket_container *ptr, char * tempbuffer, int len, struct 
 
     x_debug_log("Message received \n");
 
+    x_debug_log("Sending Acknowledgement\n");
+
     return ;
 }
 
@@ -401,6 +410,11 @@ void HandleReceive(socket_container * ptr){
     struct sockaddr temp ;
     
     int recv_n = recvfrom(ptr->sockfd, tempbuffer, 101, 0, &temp, &len);
+
+    if(dropMessage(0.1)){
+        x_debug_log("Dropping Message\n");
+        return ;
+    }
 
     if(tempbuffer[0] == 'a'){
         HandleACKMsgRecv(ptr, tempbuffer, recv_n);
@@ -517,4 +531,12 @@ int r_recvfrom(int fd, void * buffer, size_t len, int flag, struct sockaddr * ad
     pthread_mutex_unlock(&socket_ptr->lock);
 
     return retvalue;
+}
+
+int dropMessage(float p){
+    float r = (float)rand()/(float)RAND_MAX;
+
+    if(r < p)
+        return 1;
+    return 0;
 }

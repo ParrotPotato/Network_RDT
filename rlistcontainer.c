@@ -88,3 +88,12 @@ void * apply_to_all_nodes(Node * root, void function_ptr(Node * ptr, void * args
         root = root->next;
     }
 }
+
+int length(Node * root){
+    int length_val = 0 ;
+    while(root != NULL){
+        root = root->next;
+        length_val++;
+    }
+    return length_val;
+}

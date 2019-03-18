@@ -18,6 +18,6 @@ extern Node * find_node(Node * root, int key);
 extern Node * delete_list(Node * root);
 extern void * apply_to_all_nodes(Node * root, void function_ptr(Node * ptr, void * args), void * args);
 extern void print_list(Node * root);
-
+extern int length(Node * root);
 
 #endif
