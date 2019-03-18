@@ -6,6 +6,7 @@
         "rlistcontainer.h": "c",
         "rcontainer.h": "c",
         "pthread.h": "c",
-        "select.h": "c"
+        "select.h": "c",
+        "rsocket.h": "c"
     }
 }

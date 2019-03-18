@@ -1,0 +1,82 @@
+Assignment - 
+Name : Nitesh Meena
+Roll : 16CS30023
+
+TABLES AND ATTRIBUTES  
+    -> socket_table
+        socket_table container the information of all the sockets created (the 
+        program is capable of handling multiple sockets) with following 
+        attributes for each socket:
+
+            -> receive_message : This is a table contains all the messages that have 
+                been received and have not been fetched by the user (using the API 
+                call r_recvfrom). This table have following attributes:
+
+                    -> message_id : ID of the message received 
+                    -> buffer     : buffer for storing the message 
+                    -> addr       : sockaddr received along with the message (stores where the 
+                                    message came from).
+                    -> len        : length of the message 
+                    -> addrlen    : length of the addr field
+
+            -> receive_message_id : This is a table container all the message ids 
+                that have been received (to check for the duplicates). Table has following
+                attributes:
+
+                    -> message_id : ID of the message received
+
+            -> unacknowledged_message: This is a table contains all the messages that 
+                have been send using the API but whose acknowledgement has not been received
+                The table has following attributes:
+                    
+                    -> message_id   : ID of the message sent
+                    -> buffer       : buffer for the message sent (so that it can be resent if 
+                                      we timeout
+                                      before getting the acknowledgement and we need to retransmit)
+                    -> addr         : addr to which this message is supposed to be sent (again, 
+                                      needed for timeout retransmission)
+                    -> sending_time : the sending time for the message 
+            
+            -> sockfd : This is the file descriptor for the socket being handles by this record. 
+            
+            -> message_counter : This is the counter (initialized to be 0) for generating message id.
+
+            -> is_usable : This is used as a flag to check if the process is bound or not. If the 
+                socket is in not usable state the thread_x stops and wait for the socket to 
+                become usable. This is implemented using the pthread_mutex_t and pthread_cond_t for 
+                waiting for the is_usable.
+
+                    is_usable = 0 -> not usable 
+                    is_usable = 1 -> usable
+
+            -> is_close_requested : This is a bit flag in the socket_conatiner to signify that the 
+                close is called on the function or not. 
+
+            -> lock : lock for this socket contents.
+
+            -> cond : cond variable for this socket.
+
+    -> thread_table : This table is the container for all the running thread (as this code allows more than
+        one socket to run at the same given time making multiple thread_x running ). This table has the 
+        following attribtues.
+            -> thread_id : thread id for the running thread 
+            -> attr : attribute for the running thread (initialised at the time of creation)
+
+MESSAGE FORMAT:
+    There are two type of message format 
+    
+        -> Application Messages :
+            Application messageses have their first byte as the message id (as specified that we will not be
+            handling more than 100 messages).
+
+            When API call to r_sendto() is made, the message (buffer) passed is prepended with the message_id 
+            thus adding one byte.
+
+            The message_id is always positive and thus different from ACK messages
+        
+        -> ACK Message : 
+            The ACK Messages (Acknowledgement) has -1 as the first byte and second byte is the message id (which 
+            only take one byte as described above)
+
+    
+    whenever a message is recieved we we check the first byte and determine weather it is a ACK or Application Message
