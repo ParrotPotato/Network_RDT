@@ -1,7 +1,7 @@
 // TODO : check for strcpy conflicts with other message formats (suppose someone is sending a 0 or the id is 0)
 #include "rsocket.h"
 #define T 2
-#define P 0.45
+#define P 0.1
 
 int retranmission_count = 0;
 
@@ -163,7 +163,7 @@ struct def_socket_container{
 
 struct def_thread_container{
     pthread_t thread_id;
-    pthread_mutex_t lock;
+    // pthread_mutex_t lock;
     pthread_attr_t attr;
 };
 
@@ -244,7 +244,7 @@ socket_container * new_socket_container(int sockfd){
 thread_container * new_thread_container(){
 
     thread_container * thread_ptr = (thread_container *)malloc(sizeof(thread_container));
-    pthread_mutex_init(&thread_ptr->lock, NULL);
+    // pthread_mutex_init(&thread_ptr->lock, NULL);
     pthread_attr_init(&thread_ptr->attr);
     pthread_attr_setdetachstate(&thread_ptr->attr, PTHREAD_CREATE_DETACHED);
 
@@ -280,7 +280,7 @@ int r_socket(int domain, int type, int protocol){
     if(ret == -1){
         pthread_mutex_destroy(&socket_ptr->lock);
 
-        pthread_mutex_destroy(&thread_ptr->lock);
+        // pthread_mutex_destroy(&thread_ptr->lock);
         pthread_attr_destroy(&thread_ptr->attr);
         
         free(socket_ptr);
@@ -380,9 +380,14 @@ int r_close(int fd){
     Node * node1 =  find_node(socket_table, fd);
     pthread_mutex_unlock(&socket_table_lock);
 
+    pthread_mutex_lock(&socket_table_lock);
+    Node * node2 =  find_node(thread_table, fd);
+    pthread_mutex_unlock(&socket_table_lock);
+
     if(node1 == NULL)
         return -1;
     socket_container * socket_ptr = (socket_container *)node1->container;
+    thread_container * thread_ptr = (thread_container *)node2->container;
     // debug_log("\nfetching lock for socket_ptr");
 
     while(length(socket_ptr->unacknowledged_message) > 0){
@@ -395,6 +400,8 @@ int r_close(int fd){
     debug_log("requesting thread to close\n");
     pthread_cond_wait(&socket_ptr->cond, &socket_ptr->lock);
     pthread_mutex_unlock(&socket_ptr->lock);
+
+    pthread_attr_destroy(&thread_ptr->attr);
 
     pthread_mutex_destroy(&socket_ptr->lock);
     pthread_cond_destroy(&socket_ptr->cond);
