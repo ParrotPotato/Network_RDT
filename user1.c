@@ -26,5 +26,7 @@ int main(){
     }
 
     r_close(r_sockfd);
+    float ratio = getRatioForTransmission(strlen(buffer));
+    printf("Ratio : %f", ratio);
     return 0;
 }

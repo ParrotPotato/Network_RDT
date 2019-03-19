@@ -25,6 +25,5 @@ int r_connect(int sockfd, const struct sockaddr * addr, socklen_t len);
 int r_close(int sockfd);
 int r_sendto(int sockfd, const void * message, size_t len, int flags, const struct sockaddr * dest_addr, socklen_t addrlen);
 int r_recvfrom(int sockfd, void * message, size_t len, int flags, struct sockaddr * dest_addr, socklen_t * addrlen);
-float getRatioForTransmission(int length);
 
 #endif
