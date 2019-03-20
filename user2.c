@@ -13,7 +13,7 @@ int main(){
 
     int len = sizeof(server);
 
-    r_sockfd = r_socket(AF_INET, SOCK_DGRAM, 0);
+    r_sockfd = r_socket(AF_INET, SOCK_MRP, 0);
     r_bind(r_sockfd, (const struct sockaddr * )&server, sizeof(server));
 
     char buffer ;

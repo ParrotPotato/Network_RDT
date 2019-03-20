@@ -2,7 +2,7 @@ Assignment -
 Name : Nitesh Meena
 Roll : 16CS30023
 
-The following transmissions count was observed for string of length 30
+The following transmissions count was observed for string of length 30.
 
 Probability     Number of transmissions 
 0.05            0.00

@@ -268,8 +268,12 @@ void * thread_x_routine(void * args);
 
 
 int r_socket(int domain, int type, int protocol){
+    if(type != SOCK_MRP){
+        return -1;
+    }
+
     srand((unsigned long int)time(NULL));
-    int sockfd = socket(domain, type, protocol);
+    int sockfd = socket(domain, SOCK_DGRAM, protocol);
     if(sockfd == -1)
         return -1;
 

@@ -1,6 +1,9 @@
 // TODO : check for strcpy conflicts with other message formats (suppose someone is sending a 0 or the id is 0)
 #include "rsocket.h"
-// 
+#define T 2
+#define P 0.1
+
+int retranmission_count = 0;
 
 // #define TESTING
 
@@ -160,7 +163,7 @@ struct def_socket_container{
 
 struct def_thread_container{
     pthread_t thread_id;
-    pthread_mutex_t lock;
+    // pthread_mutex_t lock;
     pthread_attr_t attr;
 };
 
@@ -241,7 +244,7 @@ socket_container * new_socket_container(int sockfd){
 thread_container * new_thread_container(){
 
     thread_container * thread_ptr = (thread_container *)malloc(sizeof(thread_container));
-    pthread_mutex_init(&thread_ptr->lock, NULL);
+    // pthread_mutex_init(&thread_ptr->lock, NULL);
     pthread_attr_init(&thread_ptr->attr);
     pthread_attr_setdetachstate(&thread_ptr->attr, PTHREAD_CREATE_DETACHED);
 
@@ -265,7 +268,12 @@ void * thread_x_routine(void * args);
 
 
 int r_socket(int domain, int type, int protocol){
-    int sockfd = socket(domain, type, protocol);
+    if(type != SOCK_MRP){
+        return -1;
+    }
+
+    srand((unsigned long int)time(NULL));
+    int sockfd = socket(domain, SOCK_DGRAM, protocol);
     if(sockfd == -1)
         return -1;
 
@@ -276,7 +284,7 @@ int r_socket(int domain, int type, int protocol){
     if(ret == -1){
         pthread_mutex_destroy(&socket_ptr->lock);
 
-        pthread_mutex_destroy(&thread_ptr->lock);
+        // pthread_mutex_destroy(&thread_ptr->lock);
         pthread_attr_destroy(&thread_ptr->attr);
         
         free(socket_ptr);
@@ -376,9 +384,14 @@ int r_close(int fd){
     Node * node1 =  find_node(socket_table, fd);
     pthread_mutex_unlock(&socket_table_lock);
 
+    pthread_mutex_lock(&socket_table_lock);
+    Node * node2 =  find_node(thread_table, fd);
+    pthread_mutex_unlock(&socket_table_lock);
+
     if(node1 == NULL)
         return -1;
     socket_container * socket_ptr = (socket_container *)node1->container;
+    thread_container * thread_ptr = (thread_container *)node2->container;
     // debug_log("\nfetching lock for socket_ptr");
 
     while(length(socket_ptr->unacknowledged_message) > 0){
@@ -391,6 +404,8 @@ int r_close(int fd){
     debug_log("requesting thread to close\n");
     pthread_cond_wait(&socket_ptr->cond, &socket_ptr->lock);
     pthread_mutex_unlock(&socket_ptr->lock);
+
+    pthread_attr_destroy(&thread_ptr->attr);
 
     pthread_mutex_destroy(&socket_ptr->lock);
     pthread_cond_destroy(&socket_ptr->cond);
@@ -408,11 +423,12 @@ int r_close(int fd){
 
 void retransmit(Node * ptr, void * args){
     unacknowledge_message_container * unack_message = (unacknowledge_message_container *)ptr->container;
-    if(time(NULL) - unack_message->sending_time > 2){
+    if(time(NULL) - unack_message->sending_time > T){
         x_debug_log("Retransmitting    : %s\n", unack_message->buffer);
         x_debug_log("Retransmitting to : %d\n", *((int *)args));
         send_unacknowledge_message(*((int *)args), unack_message);
         unack_message->sending_time = time(NULL);
+        retranmission_count++;
         x_debug_log("retransmitting message\n");
     }
     return;
@@ -448,7 +464,7 @@ void HandleAppMsgRecv(socket_container *ptr, char * tempbuffer, int len, struct 
     Node  * node = find_node(ptr->receive_message_id, message_id);
     
     if(node != NULL){
-        acknowledgement_buffer[0] =  'i';
+        acknowledgement_buffer[0] = 'a';
         acknowledgement_buffer[1] = (char)message_id;
         acknowledgement_buffer[2] = '\0';
         int send_n = sendto(ptr->sockfd, acknowledgement_buffer, 3, 0, &temp, addrlen);
@@ -480,7 +496,7 @@ void HandleAppMsgRecv(socket_container *ptr, char * tempbuffer, int len, struct 
     pthread_mutex_unlock(&ptr->lock);
 
 
-    acknowledgement_buffer[0] =  'i';
+    acknowledgement_buffer[0] = 'a';
     acknowledgement_buffer[1] = (char)message_id;
     acknowledgement_buffer[2] = '\0';
     int send_n = sendto(ptr->sockfd, acknowledgement_buffer, 3, 0, &temp, addrlen);
@@ -503,12 +519,12 @@ void HandleReceive(socket_container * ptr){
     
     int recv_n = recvfrom(ptr->sockfd, tempbuffer, 101, 0, &temp, &len);
 
-    if(dropMessage(0.1)){
+    if(dropMessage(P)){
         x_debug_log("Dropping Message\n");
         return ;
     }
 
-    if(tempbuffer[0] ==  'i'){
+    if(tempbuffer[0] == 'a'){
         HandleACKMsgRecv(ptr, tempbuffer, recv_n);
     }
     else{
@@ -534,7 +550,7 @@ void * thread_x_routine(void * args){
 
     int maxfd = socket_ptr->sockfd + 1 , select_ret;
     struct timeval timeout;
-    timeout.tv_sec = 2;
+    timeout.tv_sec = T;
     timeout.tv_usec = 0;
 
     int quit_condition = 0 ;
@@ -572,7 +588,7 @@ void * thread_x_routine(void * args){
 
             HandleRetansmission(socket_ptr);
             
-            timeout.tv_sec = 2;
+            timeout.tv_sec = T;
             timeout.tv_usec = 0;
         }
         else if(FD_ISSET(socket_ptr->sockfd, &rset)){
@@ -631,4 +647,8 @@ int dropMessage(float p){
     if(r < p)
         return 1;
     return 0;
+}
+
+float getRatioForTransmission(int length){
+    return (float)retranmission_count /(float)length;
 }

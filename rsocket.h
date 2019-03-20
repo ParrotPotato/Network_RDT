@@ -19,6 +19,8 @@
 #include <sys/stat.h>
 #include <pthread.h>
 
+#define SOCK_MRP 10101
+
 int r_socket(int domain, int type, int protocol);
 int r_bind(int sockfd, const struct sockaddr * addr, socklen_t len);
 int r_connect(int sockfd, const struct sockaddr * addr, socklen_t len);
