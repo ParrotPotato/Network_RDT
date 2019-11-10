@@ -641,11 +641,16 @@ int r_recvfrom(int fd, void * buffer, size_t len, int flag, struct sockaddr * ad
     return retvalue;
 }
 
+// this function was for test environments
+// for testing weather this protocol work 
+// in environment with heavy traffic and  packet loss 
+// @HACK setting the dropping probability to 0
 int dropMessage(float p){
     float r = (float)rand()/(float)RAND_MAX;
-
+/*
     if(r < p)
         return 1;
+*/
     return 0;
 }
 
